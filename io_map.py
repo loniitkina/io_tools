@@ -7,11 +7,25 @@ import json
 
 from io_func import getColumn
 
+minconc = '50'
+minconc = '70'
+minconc = '15'
+
+cruise = 'BREATHE';months_after_freezeup=9
+cruise = 'ICEX2024';months_after_freezeup=6
+
+
 outpath = '../io_plots/'
 outpath_data = '../data/'
+bt_inpath = '../data/backtrajectories'+minconc+'/'
+bt_inpath = '../data/backtrajectories50_BREATHE/'
+bt_inpath = '../data/ICEX2024/BT/'
+
+ib_inpath = '../data/icebird_tracks/'
 
 # Opening JSON file with iceobs
-infile = glob('../data/*13.json')[0]
+infile = glob('../data/*13.json')[0]    #ArcticOcean2024
+infile = glob('../data/*30_clean.json')[0]    #BREATHE2023
 print(infile)
 f = open(infile)
 
@@ -35,6 +49,7 @@ for i in data['observations']:
     
     if llat==None: llat=0
     if llon==None: llon=0
+    if ltime==None: ltime='0000-00-00T00:00:00.000Z'
     
     lat.append(llat)
     lon.append(llon)
@@ -49,6 +64,8 @@ for i in data['observations']:
     
     pc2=(i['ice_observations'][1]['partial_concentration'])
     it2=(i['ice_observations'][1]['thickness'])
+    
+    print(ic,pc1,it1,pc2,pc2)
     
     if it2==None:
         tmp=it1
@@ -89,18 +106,13 @@ for i in data['observations']:
 # Closing file
 f.close()
 
-
-
-    
-
-
 #Plotting
-outnames = ['map_iceobs_concentration', 'map_iceobs_thickness', 'map_iceobs_algae', 'map_iceobs_sediment']
+outnames = ['map_iceobs_concentration'+minconc+'_'+cruise, 'map_iceobs_thickness'+minconc+'_'+cruise, 'map_iceobs_algae'+minconc+'_'+cruise, 'map_iceobs_sediment'+minconc+'_'+cruise]
 titles = ['Ice Concentration (0-10)', 'Ice Thickness (cm)', 'Ice algae concentration', 'Ice sediment concentration']
 datas = [iconc, it, algae, sedim]
 cms = [plt.cm.Reds, plt.cm.Reds, plt.cm.Greens, plt.cm.Blues]
-vmins = [1,100, 0, 0]
-vmaxs = [10, 200, 1, 1]
+vmins = [1,50, 0, 0]
+vmaxs = [10, 150, 1, 1]
 
 for i in range(0,len(outnames)):
     outname = outnames[i]
@@ -123,32 +135,55 @@ for i in range(0,len(outnames)):
     m.drawmeridians(np.arange(-180.,180.,20.),latmax=85.)
     
     #Load/plot backtrajectories
-    infiles = glob('../data/backtrajectories/*.csv')
-    colors = plt.cm.rainbow(np.linspace(0, 1, 108))
-    i=0
-    for num in range(1,108):
-        infile_bt = '../data/backtrajectories/'+str(num)+'.csv'
+    infiles = glob(bt_inpath+'*.csv')
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(infiles)+1))
+    
+    for j in range(1,len(infiles)+1):
+        infile_bt = bt_inpath+str(j)+'.csv'
         print(infile_bt)
         #color = next(colors)
         
-        try:
-            #read in the backtrajectories - with the structure:
-            #2024-08-10,30.5008,81.5483
-            lat_b = np.asarray(getColumn(infile_bt,2,skipheader=0),dtype=float)
-            lon_b = np.asarray(getColumn(infile_bt,1,skipheader=0),dtype=float)
-
-            xb,yb = m(lon_b,lat_b)
-            ax.plot(xb,yb,lw=2,c=colors[i],alpha=.5)
-        except:
-            print('No BT.')
+        #try:
+        #read in the backtrajectories - with the structure:
+        #2024-08-10,30.5008,81.5483
+        lat_b = np.asarray(getColumn(infile_bt,2,skipheader=0),dtype=float)
+        lon_b = np.asarray(getColumn(infile_bt,1,skipheader=0),dtype=float)
         
-        i = i +1
+        
+
+        xb,yb = m(lon_b,lat_b)
+        ax.plot(xb,yb,lw=3,c=colors[j],alpha=.5)
+        
+        ax.plot(xb[0],yb[0],'o',c=colors[j],alpha=.5,ms=10)
+        ax.plot(xb[0],yb[0],'x',c='k',alpha=1)
+
+        
+        #separate between FYI and SYI/MYI
+        if len(xb)>30.5*months_after_freezeup:
+            ax.plot(xb,yb,lw=.5,c='k',alpha=1)
+            
+            
+        #except:
+            #print('No BT.')
+        
 
     #plot ice obs data
     x,y = m(lon,lat)
+    
+    ##put in IceBird tracks
+    #infiles = glob(ib_inpath+'*.dat')
+    #for infile_ib in infiles:
+        #print(infile_ib)
+        #lat_i = np.asarray(getColumn(infile_ib,1,skipheader=0,delimiter='\t'),dtype=float)
+        #lon_i = np.asarray(getColumn(infile_ib,0,skipheader=0,delimiter='\t'),dtype=float)
+        
+        #xi,yi = m(lon_i,lat_i)
+        #ax.plot(xi,yi,lw=2)
 
+    #Plot the iceobs
+    #ax.plot(x,y)    #get cruise track
     cs=ax.scatter(x,y,c=data,s=100,cmap=cm,vmin=vmin,vmax=vmax)
-
+    
     cb=plt.colorbar(cs,orientation='vertical',pad=.01)
     cb.ax.tick_params(labelsize=20)
 
@@ -156,11 +191,21 @@ for i in range(0,len(outnames)):
     
     plt.show()
     fig1.savefig(outpath+outname,bbox_inches='tight')
+    exit()
 #plt.close()
 
 #store data for back-trajectories
 file_name = infile.split('.json')[0]+'_coords.csv'
 print(file_name)
+
+#backtrajectory algorithm doesnt take negative values for the W hemisphere
+for ll in range(0,len(lon)):
+    if lon[ll] < 0:
+        lon[ll] = 360+lon[ll]
+
+#backtrajectories are daily, take only date
+for tt in range(0,len(time)):
+    time[tt] = time[tt][:10]
 
 tt = [time,lon,lat]
 table = list(zip(*tt))

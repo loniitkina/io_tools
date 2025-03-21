@@ -7,5 +7,5 @@ def getColumn(filename, column, delimiter=',', skipinitialspace=False, skipheade
     while skipheader>0:
         next(results, None)
         skipheader=skipheader-1
-        
+    
     return [result[column] for result in results]
