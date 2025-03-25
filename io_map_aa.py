@@ -8,15 +8,18 @@ import json
 from io_func import getColumn
 
 minconc = '15'
-
 cruise = 'AA'
+bt_inpath = '../data/backtrajectories_AA/AA_Megan2/'
+
+minconc = '0'
+cruise = 'AA_mooring'
+bt_inpath = '../data/backtrajectories_AA/AA_Lucie/'
 
 outpath = '../io_plots/'
 #bt_inpath = '../data/backtrajectories'+minconc+'/'
-bt_inpath = '../data/backtrajectories_AA/AA_Megan2/'
 
 #Plotting
-outname = 'map_backtraj'+minconc+'_'+cruise+'2'
+outname = 'map_backtraj'+minconc+'_'+cruise
 title = 'Ice Back-trajectories'
 
 #Set up a map plot
