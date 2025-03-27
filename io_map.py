@@ -25,7 +25,7 @@ ib_inpath = '../data/icebird_tracks/'
 
 # Opening JSON file with iceobs
 infile = glob('../data/*13.json')[0]    #ArcticOcean2024
-infile = glob('../data/*30_clean.json')[0]    #BREATHE2023
+#infile = glob('../data/*30_clean.json')[0]    #BREATHE2023
 print(infile)
 f = open(infile)
 

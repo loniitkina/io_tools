@@ -4,6 +4,9 @@ from datetime import datetime, date
 from glob import glob
 import pyresample as pr
 import json
+import pandas as pd
+from matplotlib.dates import DateFormatter, date2num
+import locale
 
 from io_func import getColumn
 
@@ -39,11 +42,20 @@ m.drawmeridians(np.arange(-180.,180.,20.),latmax=85.)
 infiles = glob(bt_inpath+'*.csv')
 colors = plt.cm.rainbow(np.linspace(0, 1, len(infiles)))
 
+#get the times of the first and last BT
+#The filenames must have leading zeros to be sorted correctly!
+#print(sorted(infiles))
+start = np.asarray(getColumn(sorted(infiles)[0],0,skipheader=0),dtype=np.datetime64)[0]
+end = np.asarray(getColumn(sorted(infiles)[-1],0,skipheader=0),dtype=np.datetime64)[0]
+#end = np.asarray(['2020-01-31'],dtype=np.datetime64)[0]
+print(start,end)
+timeline = np.arange(start,end)
+
+
 for i in range(0,len(infiles)):
-    infile_bt = infiles[i]
+    infile_bt = sorted(infiles)[i]
     #print(infile_bt)
     #color = next(colors)
-    
     
     #read in the backtrajectories - with the structure:
     #2024-08-10,30.5008,81.5483
@@ -56,8 +68,6 @@ for i in range(0,len(infiles)):
     ax.plot(xb[0],yb[0],'o',c=colors[i],alpha=.5,ms=10)
     ax.plot(xb[0],yb[0],'x',c='k',alpha=1)
 
-    
-
 #cb.ax.tick_params(labelsize=20)
 
 ax.set_title(title, fontsize=25)
@@ -65,4 +75,27 @@ ax.set_title(title, fontsize=25)
 plt.show()
 fig1.savefig(outpath+outname,bbox_inches='tight')
 #plt.close()
+
+#timeline colorbar
+N = len(timeline)
+df = pd.DataFrame({
+           'x': np.random.randn(N),
+           'y': np.random.randn(N),
+           'z': pd.date_range(start=timeline[0], periods=N, freq='D')},index=timeline)
+
+fig, ax = plt.subplots(figsize=(10,4))
+
+smap = ax.scatter(df.x, df.y, s=50,
+                   c=[date2num(i.date()) for i in df.z], cmap=plt.cm.rainbow) # <==
+
+fig.gca().set_visible(False)
+#cb = fig.colorbar(orientation="horizontal", cax=cax)
+
+cb = fig.colorbar(smap, orientation='horizontal',format=DateFormatter('%d %b')) # <==
+cb.ax.tick_params(labelsize=20)
+#cb = fig.colorbar(smap, orientation='vertical')
+#cb.ax.set_yticklabels(df.index.strftime('%d %b'))
+
+plt.show()
+fig.savefig(outpath+outname+'_colorbar',bbox_inches='tight')
 
